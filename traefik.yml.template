@@ -1,0 +1,48 @@
+# ==============================================================================
+# PDFtrack - Traefik v3 Static Configuration Template
+# ==============================================================================
+# All variables are populated at container startup via envsubst.
+# Evaluated into /etc/traefik/traefik.yml by /entrypoint.sh.
+# ==============================================================================
+
+global:
+  checkNewVersion: false
+  sendAnonymousUsage: false
+
+api:
+  dashboard: false
+  insecure: false
+
+ping:
+  entryPoint: internal
+
+entryPoints:
+  web:
+    address: ":${PUBLIC_PORT}"
+    transport:
+      respondingTimeouts:
+        readTimeout: "${PROXY_READ_TIMEOUT}"
+        writeTimeout: "${PROXY_SEND_TIMEOUT}"
+        idleTimeout: "60s"
+      lifeCycle:
+        requestAcceptGraceTimeout: "5s"
+        graceTimeOut: "${PROXY_GRACE_TIMEOUT}"
+  internal:
+    address: ":${INTERNAL_PING_PORT}"
+
+providers:
+  file:
+    filename: "/etc/traefik/dynamic.yml"
+    watch: false
+
+log:
+  level: "${TRAEFIK_LOG_LEVEL}"
+  format: json
+
+accessLog:
+  format: json
+  filePath: "/dev/stdout"
+  fields:
+    defaultMode: keep
+    headers:
+      defaultMode: drop

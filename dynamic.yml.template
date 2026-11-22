@@ -1,0 +1,103 @@
+# ==============================================================================
+# PDFtrack - Traefik v3 Dynamic Configuration Template
+# ==============================================================================
+# Defines Middlewares, Routers, ServersTransports, and Services for PDFtrack.
+# Evaluated into /etc/traefik/dynamic.yml by /entrypoint.sh via envsubst.
+# ==============================================================================
+
+http:
+  # ----------------------------------------------------------------------------
+  # Middlewares
+  # ----------------------------------------------------------------------------
+  middlewares:
+    limit-pdf-body:
+      buffering:
+        maxRequestBodyBytes: ${MAX_REQUEST_BODY_BYTES}
+        memRequestBodyBytes: ${MEM_REQUEST_BODY_BYTES}
+
+  # ----------------------------------------------------------------------------
+  # Servers Transports
+  # ----------------------------------------------------------------------------
+  serversTransports:
+    default:
+      forwardingTimeouts:
+        dialTimeout: "${PROXY_CONNECT_TIMEOUT}"
+        responseHeaderTimeout: "${PROXY_READ_TIMEOUT}"
+      maxIdleConnsPerHost: 2
+
+  # ----------------------------------------------------------------------------
+  # Routers (with explicit priorities to avoid collisions with fallback)
+  # ----------------------------------------------------------------------------
+  routers:
+    extractor-extract:
+      entryPoints:
+        - web
+      rule: "Path(`/extract`)"
+      priority: 100
+      service: extractor-svc
+      middlewares:
+        - limit-pdf-body
+
+    extractor-health-live:
+      entryPoints:
+        - web
+      rule: "Path(`/health/live`)"
+      priority: 100
+      service: extractor-svc
+
+    extractor-health-ready:
+      entryPoints:
+        - web
+      rule: "Path(`/health/ready`)"
+      priority: 100
+      service: extractor-svc
+
+    extractor-openapi:
+      entryPoints:
+        - web
+      rule: "Path(`/openapi.json`)"
+      priority: 100
+      service: extractor-svc
+
+    extractor-docs:
+      entryPoints:
+        - web
+      rule: "PathPrefix(`/docs`)"
+      priority: 90
+      service: extractor-svc
+
+    documents-api:
+      entryPoints:
+        - web
+      rule: "PathPrefix(`/api`)"
+      priority: 80
+      service: documents-svc
+      middlewares:
+        - limit-pdf-body
+
+    extractor-fallback:
+      entryPoints:
+        - web
+      rule: "PathPrefix(`/`)"
+      priority: 1
+      service: extractor-svc
+
+  # ----------------------------------------------------------------------------
+  # Services
+  # ----------------------------------------------------------------------------
+  services:
+    extractor-svc:
+      loadBalancer:
+        strategy: p2c
+        passHostHeader: true
+        serversTransport: default
+        servers:
+          - url: "http://${EXTRACTOR_HOST}:${EXTRACTOR_PORT}"
+
+    documents-svc:
+      loadBalancer:
+        strategy: p2c
+        passHostHeader: true
+        serversTransport: default
+        servers:
+          - url: "http://${DOCUMENTS_HOST}:${DOCUMENTS_PORT}"
