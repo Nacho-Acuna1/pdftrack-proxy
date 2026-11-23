@@ -15,7 +15,7 @@ Dentro del ecosistema PDFtrack (compuesto por `pdftrack-extractor`, `pdftrack-do
                                ┌───────────────────────────┐
                                │       pdftrack-proxy      │
                                │        (Traefik v3)       │
-                               │  RAM: 128 MB | CPU: 0.25  │
+                               │  RAM: 128 MB | CPU: 0.50  │
                                └─────────────┬─────────────┘
                                              │
              ┌───────────────────────────────┴───────────────────────────────┐
@@ -31,7 +31,7 @@ Dentro del ecosistema PDFtrack (compuesto por `pdftrack-extractor`, `pdftrack-do
 ### Principios de Diseño:
 - **Stateless & Desacoplado**: No contiene código de aplicación, scripts Python ni lógica de negocio. Desconoce las bases de datos o sistemas de almacenamiento.
 - **Sin acceso a `/var/run/docker.sock`**: A diferencia de configuraciones típicas de Traefik que montan el socket de Docker (violando principios de seguridad y acoplando el proxy al demonio local), este proxy opera con el proveedor **File Provider** (`traefik.yml` y `dynamic.yml`), parametrizado de manera determinista al arrancar mediante `envsubst`.
-- **Protección Estricta de Memoria (128 MB RAM)**: Bajo un límite de hardware de `128 MB RAM` y `0.25 CPU`, el proxy soporta ráfagas de 100 VUs con archivos PDF de hasta 50 MB gracias al middleware de `buffering`, que vuelca en disco todo payload que supere los 2 MiB (`MEM_REQUEST_BODY_BYTES`), evitando errores de Out-Of-Memory (OOM).
+- **Optimización de Rendimiento (128 MB RAM | 0.50 CPU)**: Para evitar el estrangulamiento de CPU (throttling) y timeouts bajo alta concurrencia, el buffering se encuentra deshabilitado en `/extract`, transmitiendo el stream directo. En `/api` el middleware `limit-pdf-body` protege al servicio de documentos volcando a disco si supera los 2 MiB (`MEM_REQUEST_BODY_BYTES`).
 
 ---
 
@@ -41,7 +41,7 @@ Para garantizar un enrutamiento determinista y evitar que el router comodín `/`
 
 | Router Name | Regla de Path (Rule) | Prioridad | Middlewares | Upstream Destino | Descripción |
 | :--- | :--- | :---: | :---: | :---: | :--- |
-| `extractor-extract` | `Path('/extract')` | **100** | `limit-pdf-body` | `extractor-svc` | Extracción síncrona de texto y metadatos de PDF (límite 55 MB) |
+| `extractor-extract` | `Path('/extract')` | **100** | *Ninguno* | `extractor-svc` | Extracción síncrona de texto y metadatos de PDF (streaming sin buffering) |
 | `extractor-health-live` | `Path('/health/live')` | **100** | *Ninguno* | `extractor-svc` | Liveness probe del extractor |
 | `extractor-health-ready` | `Path('/health/ready')` | **100** | *Ninguno* | `extractor-svc` | Readiness probe del extractor |
 | `extractor-openapi` | `Path('/openapi.json')` | **100** | *Ninguno* | `extractor-svc` | Esquema OpenAPI 3.1 del extractor |
