@@ -35,8 +35,6 @@ http:
       rule: "Path(`/extract`)"
       priority: 100
       service: extractor-svc
-      middlewares:
-        - limit-pdf-body
 
     extractor-health-live:
       entryPoints:
