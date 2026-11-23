@@ -1,7 +1,7 @@
 FROM traefik:v3
 
-# Install gettext (envsubst) and curl for template interpolation and healthchecks
-RUN apk add --no-cache gettext curl
+# Install gettext (envsubst), curl and dos2unix for template interpolation, healthchecks and LF conversion
+RUN apk add --no-cache gettext curl dos2unix
 
 # Create configuration directory
 RUN mkdir -p /etc/traefik
@@ -14,8 +14,9 @@ COPY dynamic.yml.template /etc/traefik/dynamic.yml.template
 COPY entrypoint.sh /entrypoint.sh
 COPY validate-config.sh /validate-config.sh
 
-# Ensure scripts are executable
-RUN chmod +x /entrypoint.sh /validate-config.sh
+# Ensure scripts have Linux LF line endings and are executable
+RUN dos2unix /entrypoint.sh /validate-config.sh && \
+    chmod +x /entrypoint.sh /validate-config.sh
 
 # Keep root user (necessary on Alpine Linux to bind privileged port 80 without extra capabilities)
 USER root

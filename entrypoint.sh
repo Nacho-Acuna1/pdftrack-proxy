@@ -37,14 +37,14 @@ if [ ! -f "$TEMPLATE_STATIC" ]; then
     echo "[entrypoint] FATAL: Missing static template: $TEMPLATE_STATIC" >&2
     exit 1
 fi
-envsubst "$VARS" < "$TEMPLATE_STATIC" > "$TARGET_STATIC"
+envsubst < "$TEMPLATE_STATIC" > "$TARGET_STATIC"
 
 echo "[entrypoint] Rendering Traefik dynamic configuration: $TARGET_DYNAMIC"
 if [ ! -f "$TEMPLATE_DYNAMIC" ]; then
     echo "[entrypoint] FATAL: Missing dynamic template: $TEMPLATE_DYNAMIC" >&2
     exit 1
 fi
-envsubst "$VARS" < "$TEMPLATE_DYNAMIC" > "$TARGET_DYNAMIC"
+envsubst < "$TEMPLATE_DYNAMIC" > "$TARGET_DYNAMIC"
 
 # Validate that no unexpanded placeholders remain
 for cfg in "$TARGET_STATIC" "$TARGET_DYNAMIC"; do
